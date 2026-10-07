@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bedrock vs Vertex Model Value</title>
+<meta name="description" content="Every frontier LLM on AWS Bedrock and Google Vertex AI ranked by capability per dollar, measured against Claude Sonnet 5.5 at high.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='14'>📊</text></svg>">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="What Bedrock and Vertex actually charge for capability">
+<meta property="og:description" content="At an identical rate card, models differ tenfold in what a finished task costs. All 32 measured models ranked by capability per dollar.">
+
+<style>
+  :root {
+    color-scheme: light;
+    --ground:      #F2F5F3;
+    --surface:     #FBFCFB;
+    --surface-2:   #ECF0ED;
+    --ink:         #141B18;
+    --ink-2:       #566660;
+    --ink-3:       #7E8C85;
+    --rule:        #D5DCD7;
+    --rule-soft:   #E4E9E5;
+    --accent:      #0B6E5A;
+    --accent-soft: #DDEDE7;
+    --s1:          #2a78d6;
+    --s2:          #eb6834;
+    --s3:          #1baf7a;
+    --warn:        #9A5B06;
+    --shadow:      0 1px 2px rgba(20,27,24,.05), 0 8px 24px -16px rgba(20,27,24,.18);
+
+    --serif: "Iowan Old Style", "Charter", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0D1411; --surface: #161D1A; --surface-2: #1E2723;
+      --ink: #E7EDE9; --ink-2: #9FACA5; --ink-3: #7A8880;
+      --rule: #28332E; --rule-soft: #1F2925;
+      --accent: #4FB89B; --accent-soft: #15302A;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --warn: #D79A3C;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0D1411; --surface: #161D1A; --surface-2: #1E2723;
+    --ink: #E7EDE9; --ink-2: #9FACA5; --ink-3: #7A8880;
+    --rule: #28332E; --rule-soft: #1F2925;
+    --accent: #4FB89B; --accent-soft: #15302A;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --warn: #D79A3C;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px 88px; }
+
+  header.mast {
+    border-bottom: 1px solid var(--rule);
+    padding: 52px 0 26px;
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3); margin: 0 0 16px;
+  }
+  h1 {
+    font-size: clamp(31px, 5vw, 48px); line-height: 1.07; letter-spacing: -.021em;
+    font-weight: 600; margin: 0 0 18px; text-wrap: balance; max-width: 24ch;
+  }
+  .standfirst {
+    font-size: 19px; color: var(--ink-2); max-width: 64ch; margin: 0 0 22px;
+  }
+  .meta {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-3);
+    display: flex; flex-wrap: wrap; gap: 6px 22px;
+  }
+
+  .answers {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 3px; overflow: hidden; margin: 0 0 48px; box-shadow: var(--shadow);
+  }
+  .answer { background: var(--surface); padding: 20px 20px 22px; display: flex; flex-direction: column; gap: 7px; }
+  .answer .q {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .answer .a { font-size: 20px; line-height: 1.22; font-weight: 600; letter-spacing: -.012em; }
+  .answer .a em { font-style: normal; color: var(--accent); }
+  .answer .n {
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  section { margin: 0 0 56px; }
+  .sechead {
+    display: flex; align-items: baseline; gap: 14px;
+    border-top: 2px solid var(--ink); padding-top: 12px; margin-bottom: 20px;
+  }
+  .sechead h2 {
+    font-size: clamp(22px, 3vw, 28px); line-height: 1.15; letter-spacing: -.016em;
+    font-weight: 600; margin: 0; flex: 1; text-wrap: balance;
+  }
+  .sechead .src {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3); white-space: nowrap;
+  }
+  p { margin: 0 0 1.05em; max-width: 68ch; }
+  strong { font-weight: 600; }
+  code, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  code { font-size: .86em; background: var(--surface-2); padding: .1em .36em; border-radius: 2px; }
+  a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .findings { display: grid; gap: 20px; margin-bottom: 8px; }
+  .finding { display: grid; grid-template-columns: 54px 1fr; gap: 18px; align-items: start; }
+  .finding .k {
+    font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--accent);
+    font-variant-numeric: tabular-nums; line-height: 1.2; padding-top: 2px;
+  }
+  .finding p { margin: 0; max-width: 72ch; }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 15px 19px; margin: 0 0 1.3em; border-radius: 0 3px 3px 0;
+  }
+  .note p:last-child { margin-bottom: 0; }
+  .note .lbl {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 5px;
+  }
+
+  .baseline {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-2);
+    margin: 0 0 12px;
+  }
+  .baseline .lbl {
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+  }
+  .baseline button {
+    font-family: var(--mono); font-size: 11.5px;
+    background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--rule); border-radius: 2px;
+    padding: 4px 10px; cursor: pointer;
+  }
+  .baseline button:hover { color: var(--ink); border-color: var(--ink-3); }
+  .baseline button[aria-pressed="true"] {
+    background: var(--accent-soft); color: var(--accent);
+    border-color: var(--accent); font-weight: 600;
+  }
+  .baseline .cur { color: var(--ink-3); }
+  .worse { color: var(--ink-3); }
+
+  .tscroll {
+    overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px;
+    background: var(--surface); margin: 0 0 12px; box-shadow: var(--shadow);
+  }
+  table {
+    border-collapse: collapse; width: 100%;
+    font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums;
+  }
+  caption {
+    caption-side: top; text-align: left; font-family: var(--mono); font-size: 11px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+    padding: 12px 14px 10px;
+  }
+  th, td { text-align: left; padding: 7px 13px; border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
+  thead th {
+    font-weight: 600; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-2); border-bottom: 1px solid var(--rule);
+    position: sticky; top: 0; background: var(--surface);
+  }
+  td.n, th.n { text-align: right; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--surface-2); }
+  .lead-cell { font-family: var(--serif); font-size: 15px; }
+  thead th.srt { padding: 0; }
+  thead th.srt .srtbtn {
+    font: inherit; letter-spacing: inherit; text-transform: inherit;
+    color: inherit; background: none; border: 0; border-radius: 2px;
+    padding: 7px 13px; width: 100%; text-align: inherit;
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  thead th.srt.n .srtbtn { text-align: right; }
+  thead th.srt .srtbtn:hover { color: var(--ink); }
+  thead th.srt .srtbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  thead th.srt .srtbtn::after {
+    content: ""; display: inline-block; width: 0; height: 0; margin-left: 6px;
+    vertical-align: middle; border-left: 3.5px solid transparent;
+    border-right: 3.5px solid transparent; opacity: 0;
+  }
+  thead th.srt.asc  .srtbtn::after { border-bottom: 4px solid var(--accent); opacity: 1; }
+  thead th.srt.desc .srtbtn::after { border-top: 4px solid var(--accent); opacity: 1; }
+  .pill {
+    display: inline-block; font-size: 10.5px; letter-spacing: .06em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 2px;
+    border: 1px solid currentColor;
+  }
+  .pill.b { color: var(--s1); }
+  .pill.v { color: var(--s2); }
+  .pill.x { color: var(--s3); }
+  .pill.d { color: var(--ink-2); }
+  .best { color: var(--accent); font-weight: 600; }
+  .tnote {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
+    margin: 0 0 1.3em; max-width: 86ch; line-height: 1.6;
+  }
+
+  .verdict {
+    border: 1px solid var(--rule); border-radius: 3px; overflow: hidden;
+    background: var(--surface); box-shadow: var(--shadow);
+  }
+  .vrow { display: grid; grid-template-columns: 1fr 1.5fr; border-bottom: 1px solid var(--rule-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow .vq {
+    padding: 15px 19px; background: var(--surface-2); font-family: var(--mono);
+    font-size: 12.5px; line-height: 1.5; color: var(--ink-2); border-right: 1px solid var(--rule-soft);
+  }
+  .vrow .va { padding: 15px 19px; font-size: 16px; }
+
+  .method {
+    display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 3px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .mrow { background: var(--surface); padding: 18px 20px 20px; }
+  .mhead { display: flex; align-items: baseline; gap: 11px; flex-wrap: wrap; margin-bottom: 11px; }
+  .mrow h3 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -.008em; }
+  .tag {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 2px;
+    border: 1px solid currentColor; white-space: nowrap;
+  }
+  .tag.own { color: var(--accent); }
+  .tag.third { color: var(--s2); }
+  .tag.vend { color: var(--s1); }
+  .mrow dl { margin: 0; display: grid; grid-template-columns: 136px 1fr; gap: 8px 16px; }
+  .mrow dt {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3); padding-top: 3px;
+  }
+  .mrow dd { margin: 0; font-size: 15.5px; line-height: 1.5; }
+  .mrow dd code { font-size: .8em; word-break: break-all; }
+  .mrow dd.warn { color: var(--warn); }
+
+  ol.limits { max-width: 72ch; padding-left: 1.3em; }
+  ol.limits li { margin-bottom: .5em; }
+
+  footer.foot {
+    border-top: 1px solid var(--rule); padding-top: 18px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); line-height: 1.7;
+  }
+
+  @media (max-width: 640px) {
+    .vrow { grid-template-columns: 1fr; }
+    .vrow .vq { border-right: 0; border-bottom: 1px solid var(--rule-soft); }
+    .mrow dl { grid-template-columns: 1fr; gap: 3px; }
+    .mrow dt { padding-top: 9px; }
+    .finding { grid-template-columns: 38px 1fr; gap: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Platform evaluation &middot; frontier LLM unit economics</p>
+  <h1>What Bedrock and Vertex actually charge for capability</h1>
+  <p class="standfirst">
+    Anthropic models cost the same on both platforms, so the platform decision is about
+    catalog, not price. The spend decision is about something else: at an identical rate
+    card, models differ tenfold in what a finished task costs.
+  </p>
+  <div class="meta">
+    <span>Researched 2026-10-06</span>
+    <span>USD / 1M tokens, cheapest routing tier</span>
+    <span><a href="#method">How this was measured &darr;</a></span>
+  </div>
+</header>
+
+<div class="answers">
+  <div class="answer">
+    <span class="q">Best capability per dollar</span>
+    <span class="a"><em>GPT-6.1 Sol</em> at <code>high</code></span>
+    <span class="n">index 50 &middot; $0.32 / task &middot; Bedrock only</span>
+  </div>
+  <div class="answer">
+    <span class="q">Highest capability</span>
+    <span class="a"><em>Claude Opus 5.5</em> at <code>max</code></span>
+    <span class="n">index 58 &middot; $5.98 / task &middot; both</span>
+  </div>
+  <div class="answer">
+    <span class="q">Cheapest credible tier</span>
+    <span class="a"><em>GPT-6 Luna</em> / <em>DeepSeek&nbsp;V4.1&nbsp;Flash</em></span>
+    <span class="n">index 38 @ $0.07 &middot; index 39 @ $0.27</span>
+  </div>
+  <div class="answer">
+    <span class="q">Biggest cost lever</span>
+    <span class="a">The <em>effort</em> setting</span>
+    <span class="n">up to &minus;85% spend for &minus;9 index points</span>
+  </div>
+</div>
+
+<!-- ================= THE TABLE ================= -->
+<section>
+  <div class="sechead">
+    <h2>Every model, ranked by capability per dollar</h2>
+    <span class="src">The table</span>
+  </div>
+
+  <div class="findings">
+    <div class="finding">
+      <span class="k">1</span>
+      <p>
+        <strong>The rate card is not the bill.</strong> Claude Sonnet 5.5, GPT-6.1 Sol
+        and GPT-6 Sol all list at <span class="num">$2&nbsp;/&nbsp;$10</span>. Measured
+        cost to finish the same benchmark suite: <span class="num">$7.67</span>,
+        <span class="num">$0.72</span>, <span class="num">$1.04</span>. Price per token
+        tells you almost nothing about the bill; only the $ / task column does.
+      </p>
+    </div>
+    <div class="finding">
+      <span class="k">2</span>
+      <p>
+        <strong>Effort beats model choice as a cost lever.</strong> The same model
+        appears twice below at different <code>effort</code> settings &mdash; identical
+        rates, very different bills. Sonnet 5.5 drops from
+        <span class="num">$7.67</span> to <span class="num">$1.12</span> moving
+        <code>max</code>&nbsp;&rarr;&nbsp;<code>high</code>, for nine index points. Pin
+        effort per route, not just model per route.
+      </p>
+    </div>
+    <div class="finding">
+      <span class="k">3</span>
+      <p>
+        <strong>Platform choice is a catalog question &mdash; version by version.</strong>
+        OpenAI's GPT-6 line is Bedrock-only; Gemini is Vertex-only; the DeepSeek V4
+        family is on neither. Claude is on both at identical prices, but the open-weight
+        families are not version-matched: Bedrock carries GLM&nbsp;5.3, Kimi&nbsp;K3 and
+        MiniMax&nbsp;M2.5 while Vertex carries GLM&nbsp;5.2, Kimi&nbsp;K2&nbsp;Thinking
+        and MiniMax&nbsp;M2. Check the version, not the vendor.
+      </p>
+    </div>
+  </div>
+
+  <div class="baseline" id="baseline">
+    <span class="lbl">Budget baseline:</span>
+    <span>Claude Sonnet 5.5 at</span>
+    <button type="button" data-b="7.67" data-m="Claude Sonnet 5.5 (max)">max</button>
+    <button type="button" data-b="1.12" data-m="Claude Sonnet 5.5 (high)">high</button>
+    <button type="button" data-b="0.59" data-m="Claude Sonnet 5.5 (medium)">medium</button>
+    <span class="cur" id="basecur"></span>
+  </div>
+
+  <div class="tscroll">
+    <table>
+      <caption>Best value first &middot; click any column to re-sort</caption>
+      <thead id="th1"></thead>
+      <tbody id="tb1"></tbody>
+    </table>
+  </div>
+
+  <p class="tnote">
+    <strong>Index per $</strong> is a blunt ratio &mdash; it rewards cheapness regardless
+    of whether the score clears your bar, which is why an index-38 model tops it. Sort by
+    Index to set a floor, then optimise cost beneath it.<br>
+    <strong>Tasks per $200</strong> and <strong>Budget vs Sonnet 5.5</strong> both
+    divide a fixed budget by $ / task &mdash; how many Intelligence Index tasks that
+    budget completes, and how much further or shorter the same $200 goes than it would
+    on Claude Sonnet 5.5. The baseline is selectable above the table because it changes the answer
+    by about seven times: Sonnet 5.5 costs $7.67 a task at <code>max</code> and $1.12 at
+    <code>high</code>.<br>
+    <strong>$ / task</strong> is the measured cost of completing the whole Intelligence
+    Index suite, reasoning tokens included. <strong>Rates</strong> are the cheapest
+    routing tier (Bedrock <em>Global CRIS</em>, Vertex <em>Global</em>); regional and geo
+    routing is +10% on both. DeepSeek is shown at peak rates &mdash; off-peak is half,
+    and peak covers only 01:00&ndash;04:00 and 06:00&ndash;10:00 UTC on weekdays.<br>
+    <strong>No token counts here on purpose:</strong> vendors tokenize the same text
+    differently, so token counts are not comparable across vendors. Dollars are.<br>
+    † Marketplace-billed on Bedrock; rates not published on the main pricing page, so
+    Artificial Analysis's listed rate is shown.<br>
+    <strong>What is in this table:</strong> every model with an AA-<em>measured</em> run
+    scoring index 17 or above (Claude Haiku 4.5 sets that floor) that is available on
+    Bedrock, Vertex or DeepSeek direct. Measured but below the floor, so excluded:
+    Mistral Large 3 (index 9, $0.03) and Qwen3 Coder Next (index 9, $0.55) &mdash; both
+    would rank near the top on Index per $, which is exactly why the floor exists.
+    Available but AA-<em>estimated</em> rather than measured, so also excluded: MiniMax
+    M2.5 &asymp;23, DeepSeek V3.2 &asymp;21, Amazon Nova 2 Pro &asymp;14, Nova 2 Lite
+    &asymp;13, Llama 4 Maverick &asymp;10.
+  </p>
+
+  <div class="note">
+    <span class="lbl">Caching moves these numbers more than most model switches</span>
+    <p>
+      Priced against the rates above, a 40-turn agent task resending a 60,000-token
+      prefix each turn costs <span class="num">$2.26</span> on Claude Sonnet 5.5 at a 90%
+      cache hit rate &mdash; and <span class="num">$6.00</span> with caching off. Grok's
+      cache read is only a 75% discount, the weakest at the frontier; Claude 5.5 and
+      GPT-6.1 Sol are 95%. Verify <code>cache_read_input_tokens</code> in production
+      before trusting any forecast.
+    </p>
+  </div>
+</section>
+
+<!-- ================= VERDICT ================= -->
+<section>
+  <div class="sechead">
+    <h2>What to pick</h2>
+    <span class="src">Recommendation</span>
+  </div>
+  <div class="verdict">
+    <div class="vrow">
+      <div class="vq">AWS-committed</div>
+      <div class="va"><b>GPT-6.1 Sol</b> at <code>high</code> &mdash; index 50 for $0.32/task, within 8 points of the best model available anywhere at a twentieth of the cost.</div>
+    </div>
+    <div class="vrow">
+      <div class="vq">GCP-committed</div>
+      <div class="va"><b>Claude Sonnet 5.5</b> at <code>high</code> for quality work; <b>Gemini 3.8 Flash</b> for volume &mdash; but budget its January 2027 doubling from $0.75/$3.75 to $1.50/$7.50.</div>
+    </div>
+    <div class="vrow">
+      <div class="vq">Need the highest capability</div>
+      <div class="va"><b>Claude Opus 5.5</b> at <code>max</code>, identically priced on both platforms. At <code>high</code> it is 70% cheaper for four points &mdash; make <code>high</code> the default.</div>
+    </div>
+    <div class="vrow">
+      <div class="vq">Non-interactive or overnight batch</div>
+      <div class="va"><b>Vertex</b> &mdash; it publishes a batch tier for Opus 5.5 and Sonnet 5.5 that Bedrock currently does not. Sonnet 5.5 is a straight 50% off ($1.00/$5.00); Opus 5.5's Global batch rate is $2.50/$12.50, only 37.5% off and identical to Opus 5's &mdash; its regional batch rate <em>is</em> 50%, so the Global row looks like an error on Google's page. Verify before sizing a batch budget.</div>
+    </div>
+    <div class="vrow">
+      <div class="vq">Budget is the binding constraint and governance permits an off-platform vendor</div>
+      <div class="va"><b>DeepSeek V4.1 Flash</b> direct &mdash; index 39 at $0.27/task, $0.135 off-peak. Roughly 20&ndash;45&times; the budget life of Opus 5.5 at <code>max</code>, for 19 index points. Different vendor and jurisdiction: a compliance review, not a procurement line.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= METHOD ================= -->
+<section id="method">
+  <div class="sechead">
+    <h2>How every number here was produced</h2>
+    <span class="src">Method</span>
+  </div>
+
+  <p>
+    Three kinds of number appear above, with three different standards of evidence.
+    <strong>No model was run to produce this page.</strong>
+  </p>
+
+  <div class="method">
+    <div class="mrow">
+      <div class="mhead"><h3>Rates</h3><span class="tag vend">Vendor figures, retrieved</span></div>
+      <dl>
+        <dt>How</dt>
+        <dd>
+          AWS's pricing page renders from a live price map rather than static HTML, so
+          figures were resolved from
+          <code>b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/{bedrock,bedrockfoundationmodels}/USD/current/*.json</code>
+          and the page's own templates re-rendered against it. Marketplace-billed models,
+          which that map omits, came from the 134 cards under
+          <code>docs.aws.amazon.com/bedrock/latest/userguide/model-card-*.html</code>.
+          Vertex from <code>cloud.google.com/vertex-ai/generative-ai/pricing</code>;
+          DeepSeek from <code>api-docs.deepseek.com/quick_start/pricing</code>.
+        </dd>
+        <dt>Confidence</dt>
+        <dd>High, as of 6 October 2026. Several models here are under 60 days old and rates move.</dd>
+      </dl>
+    </div>
+
+    <div class="mrow">
+      <div class="mhead"><h3>Index and $ / task</h3><span class="tag third">Third-party measurement</span></div>
+      <dl>
+        <dt>What it is</dt>
+        <dd>
+          The Artificial Analysis Intelligence Index &mdash; a composite of several
+          independent evaluations &mdash; and AA's measured cost to run that whole suite
+          at provider list rates, reasoning tokens included. Read off ~35 AA per-model
+          pages. The benchmarks were run by AA, not here.
+        </dd>
+        <dt>Not verified</dt>
+        <dd class="warn">
+          AA's methodology, harness, prompts and repeat policy were not independently
+          checked. Treat the Index as one third party's composite, not ground truth.
+        </dd>
+      </dl>
+    </div>
+
+    <div class="mrow">
+      <div class="mhead"><h3>The caching figures</h3><span class="tag own">Arithmetic on stated assumptions</span></div>
+      <dl>
+        <dt>The workload</dt>
+        <dd>
+          40 turns, each resending a 60,000-token prefix of which 90% is served from
+          cache, producing 3,000 output tokens. Cache write charged once. Nothing empirical.
+        </dd>
+        <dt>Weakest link</dt>
+        <dd class="warn">
+          The 90% cache hit rate is an assumption, not an observation &mdash; the single
+          most load-bearing input, and the easiest to be wrong about. A stale timestamp
+          in a system prompt silently drops it to zero.
+        </dd>
+        <dt>Reproduce it</dt>
+        <dd>Ships as <code>platform-models.py</code>; every parameter is a flag (<code>--prefix --hit --output --turns --floor</code>).</dd>
+      </dl>
+    </div>
+
+    <div class="mrow">
+      <div class="mhead"><h3>Not measured at all</h3><span class="tag third">Gaps</span></div>
+      <dl>
+        <dt>Not tested</dt>
+        <dd>
+          Latency under load. Tool-use reliability over long runs. Long-context behaviour.
+          Output quality on <em>your</em> workload. Whether caching actually engages for a
+          given platform and model pairing. Rate-limit headroom.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>This page narrows the field and sizes the bill. It does not pick the model.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LIMITS ================= -->
+<section>
+  <div class="sechead">
+    <h2>What this does not tell you</h2>
+    <span class="src">Limits</span>
+  </div>
+  <ol class="limits">
+    <li><strong>One composite score.</strong> The Index says nothing about long-context
+      behaviour, tool-use reliability, or latency under load &mdash; often the things
+      that decide whether an agent is usable. Index 58 vs 52 is not a guarantee on your
+      workload.</li>
+    <li><strong>The measured costs come from one harness.</strong> How much a model
+      generates to reach an answer is prompt-dependent; your $ / task will differ.</li>
+    <li><strong>Catalog availability is not entitlement.</strong> Both platforms gate
+      models per account and region. Verify access before designing around one.</li>
+    <li><strong>Prices move faster than this page.</strong> Re-pull before committing budget.</li>
+  </ol>
+</section>
+
+<footer class="foot">
+  Compiled 6 October 2026. Full provenance in
+  <a href="#method">How every number here was produced</a>. No account-specific
+  entitlements or negotiated rates assumed; no model was run to produce this page.
+</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* name, platform, AA index, AA $/task, input, output, cache read, context, marketplace? */
+  var M = [
+    ["GPT-6 Luna",                 "bedrock", 38, 0.07,  0.10,  0.50, 0.010,  "1.05M", 0],
+    ["GPT-5.6 Luna",               "bedrock", 37, 0.18,  0.20,  1.20, 0.020,  "1.05M", 0],
+    ["GPT-6.1 Sol (high)",         "bedrock", 50, 0.32,  2.00, 10.00, 0.100,  "1M",    0],
+    ["DeepSeek V4 Flash",          "direct",  34, 0.22,  0.44,  1.32, 0.013,  "1M",    0],
+    ["DeepSeek V4.1 Flash",        "direct",  39, 0.27,  0.30,  1.20, 0.006,  "1M",    0],
+    ["GPT-6 Sol (high)",           "bedrock", 42, 0.37,  2.00, 10.00, 0.200,  "1.05M", 0],
+    ["Claude Sonnet 5.5 (medium)", "both",    41, 0.59,  2.00, 10.00, 0.200,  "1M",    0],
+    ["DeepSeek V4 Pro",            "direct",  36, 0.67,  1.32,  3.96, 0.044,  "1M",    0],
+    ["GPT-6.1 Sol (max)",          "bedrock", 52, 0.72,  2.00, 10.00, 0.100,  "1M",    0],
+    ["Claude Haiku 4.5",           "both",    17, 0.28,  1.00,  5.00, 0.100,  "200K",  0],
+    ["Gemini 3.7 Flash",           "vertex",  39, 0.93,  0.75,  3.75, 0.075,  "1M",    0],
+    ["GPT-6 Sol (max)",            "bedrock", 48, 1.04,  2.00, 10.00, 0.200,  "1.05M", 0],
+    ["Claude Sonnet 5.5 (high)",   "both",    47, 1.12,  2.00, 10.00, 0.200,  "1M",    0],
+    ["Gemini 3.8 Flash",           "vertex",  41, 1.24,  0.75,  3.75, 0.075,  "1M",    0],
+    ["Gemini 3.1 Pro (preview)",   "vertex",  30, 1.30,  2.00, 12.00, 0.200,  "1M",    0],
+    ["GPT-5.6 Terra",              "bedrock", 42, 1.40,  2.00, 12.00, 0.200,  "1.05M", 0],
+    ["GLM 5.2",                    "vertex",  34, 1.47,  1.40,  4.40, 0.140,  "1M",    1],
+    ["Grok 4.6",                   "both",    44, 1.48,  2.00,  6.00, 0.500,  "500K",  0],
+    ["Claude Opus 5.5 (high)",     "both",    54, 1.82,  4.00, 20.00, 0.200,  "1M",    0],
+    ["GPT-5.6 Sol",                "bedrock", 47, 1.99,  4.00, 20.00, 0.400,  "1.05M", 0],
+    ["Kimi K3",                    "bedrock", 44, 2.00,  3.00, 15.00, 0.300,  "1M",    1],
+    ["GLM 5.3",                    "bedrock", 45, 2.01,  1.40,  4.40, 0.140,  "1M",    1],
+    ["GPT-6 Astra",                "bedrock", 53, 3.26, 10.00, 50.00, 1.000,  "1.05M", 0],
+    ["Claude Opus 5 (high)",       "both",    48, 3.61,  5.00, 25.00, 0.500,  "1M",    0],
+    ["Gemini 3.5 Flash",           "vertex",  33, 3.69,  1.50,  9.00, 0.150,  "1M",    0],
+    ["Grok 4.7",                   "both",    46, 3.74,  2.00,  6.00, 0.500,  "500K",  0],
+    ["Claude Opus 4.8",            "both",    42, 4.08,  5.00, 25.00, 0.500,  "1M",    0],
+    ["Claude Sonnet 5 (max)",      "both",    38, 5.09,  2.00, 10.00, 0.200,  "1M",    0],
+    ["Claude Opus 5 (max)",        "both",    51, 5.86,  5.00, 25.00, 0.500,  "1M",    0],
+    ["Claude Opus 5.5 (max)",      "both",    58, 5.98,  4.00, 20.00, 0.200,  "1M",    0],
+    ["Claude Fable 5.1",           "both",    53, 7.63, 10.00, 50.00, 0.250,  "1M",    0],
+    ["Claude Sonnet 5.5 (max)",    "both",    56, 7.67,  2.00, 10.00, 0.200,  "1M",    0]
+  ];
+
+  var PILL = { bedrock: ["b", "Bedrock"], vertex: ["v", "Vertex"],
+               both: ["x", "Both"], direct: ["d", "Direct"] };
+  function pill(k) { return '<span class="pill ' + PILL[k][0] + '">' + PILL[k][1] + "</span>"; }
+  function ctxNum(t) { return parseFloat(t) * (/M/.test(t) ? 1000 : 1); }
+  function val(d) { return d[2] / d[3]; }
+  function mult(m) { return m >= 10 ? m.toFixed(0) : m.toFixed(1); }
+
+  var COLS = [
+    { label: "Model (effort)", dir: 1, cls: "", td: "lead-cell",
+      get: function (d) { return d[0] + (d[8] ? " †" : ""); }, key: function (d) { return d[0]; } },
+    { label: "Where", dir: 1, cls: "",
+      get: function (d) { return pill(d[1]); }, key: function (d) { return PILL[d[1]][1]; } },
+    { label: "Index", dir: -1, cls: "n",
+      get: function (d) { return d[2]; }, key: function (d) { return d[2]; } },
+    { label: "$ / task", dir: 1, cls: "n",
+      get: function (d) { return "$" + d[3].toFixed(2); }, key: function (d) { return d[3]; },
+      td: function (d) { return d[3] <= 0.40 ? "best" : ""; } },
+    { label: "Index per $", dir: -1, cls: "n",
+      get: function (d) { return val(d).toFixed(0); }, key: val,
+      td: function (d) { return val(d) >= 100 ? "best" : ""; } },
+    { label: "Tasks per $200", dir: -1, cls: "n",
+      get: function (d) { return Math.round(200 / d[3]).toLocaleString(); },
+      key: function (d) { return 200 / d[3]; } },
+    { label: "Budget vs Sonnet 5.5", dir: -1, cls: "n",
+      get: function (d) {
+        if (d[0] === state.baseModel) return "baseline";
+        var m = state.base / d[3];
+        return m > 1 ? mult(m) + "× more" : mult(1 / m) + "× less";
+      },
+      key: function (d) { return state.base / d[3]; },
+      td: function (d) {
+        var m = state.base / d[3];
+        return m >= 2 ? "best" : (m < 0.98 ? "worse" : "");
+      } },
+    { label: "Input", dir: 1, cls: "n",
+      get: function (d) { return "$" + d[4].toFixed(2); }, key: function (d) { return d[4]; } },
+    { label: "Output", dir: 1, cls: "n",
+      get: function (d) { return "$" + d[5].toFixed(2); }, key: function (d) { return d[5]; } },
+    { label: "Cache read", dir: 1, cls: "n",
+      get: function (d) { return "$" + d[6].toFixed(3).replace(/0$/, ""); },
+      key: function (d) { return d[6]; } },
+    { label: "Cache saving", dir: -1, cls: "n",
+      get: function (d) { return (100 - 100 * d[6] / d[4]).toFixed(0) + "%"; },
+      key: function (d) { return 1 - d[6] / d[4]; } },
+    { label: "Context", dir: -1, cls: "n",
+      get: function (d) { return d[7]; }, key: function (d) { return ctxNum(d[7]); } }
+  ];
+
+  var thead = document.getElementById("th1");
+  var tbody = document.getElementById("tb1");
+  var state = { i: 4, dir: -1, base: 1.12, baseName: "high",
+                baseModel: "Claude Sonnet 5.5 (high)" };
+  var BUDGET_COL = 6;
+  function budgetLabel() { return "Budget vs Sonnet 5.5 " + state.baseName; }
+
+  var tr = document.createElement("tr");
+  COLS.forEach(function (c, i) {
+    var th = document.createElement("th");
+    th.className = c.cls + " srt";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "srtbtn";
+    btn.textContent = c.label;
+    btn.setAttribute("aria-label", "Sort by " + c.label);
+    btn.addEventListener("click", function () {
+      state.dir = (state.i === i) ? -state.dir : c.dir;
+      state.i = i;
+      render();
+    });
+    th.appendChild(btn);
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+
+  function render() {
+    var c = COLS[state.i];
+    var rows = M.slice().sort(function (a, b) {
+      var va = c.key(a), vb = c.key(b);
+      if (typeof va === "string") return state.dir * va.localeCompare(vb);
+      return state.dir * (va - vb);
+    });
+    tbody.innerHTML = rows.map(function (r) {
+      return "<tr>" + COLS.map(function (col) {
+        var extra = typeof col.td === "function" ? col.td(r) : (col.td || "");
+        return '<td class="' + col.cls + " " + extra + '">' + col.get(r) + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    Array.prototype.forEach.call(thead.querySelectorAll("th"), function (th, i) {
+      th.classList.remove("asc", "desc");
+      th.removeAttribute("aria-sort");
+      if (i === BUDGET_COL) {
+        var b = th.firstChild;
+        b.textContent = budgetLabel();
+        b.setAttribute("aria-label", "Sort by " + budgetLabel());
+      }
+      if (i === state.i) {
+        th.classList.add(state.dir === 1 ? "asc" : "desc");
+        th.setAttribute("aria-sort", state.dir === 1 ? "ascending" : "descending");
+      }
+    });
+  }
+  var bwrap = document.getElementById("baseline");
+  var bcur = document.getElementById("basecur");
+  var btns = bwrap.querySelectorAll("button");
+  Array.prototype.forEach.call(btns, function (b) {
+    b.addEventListener("click", function () {
+      state.base = parseFloat(b.dataset.b);
+      state.baseName = b.textContent;
+      state.baseModel = b.dataset.m;
+      sync();
+      render();
+    });
+  });
+  function sync() {
+    Array.prototype.forEach.call(btns, function (b) {
+      b.setAttribute("aria-pressed", parseFloat(b.dataset.b) === state.base ? "true" : "false");
+    });
+    bcur.textContent = "= $" + state.base.toFixed(2) + " / task, so $200 buys " +
+                       Math.round(200 / state.base).toLocaleString() + " tasks";
+  }
+  sync();
+  render();
+})();
+</script>
+
+</body>
+</html>
